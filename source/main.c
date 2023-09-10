@@ -331,6 +331,8 @@ int decrypt_self(int sock, uint64_t authmgr_handle, char *path, int out_fd, stru
 
     err = 0;
 
+    SOCK_LOG(sock, "[!] enter decrypt_self %s\n", path);
+
     // Open SELF file for reading
     self_file_fd = _open(path, 0, 0);
     if (self_file_fd < 0) {
@@ -557,7 +559,7 @@ void preload_dirents(int sock, char *dir, char *out)
         SOCK_LOG(sock, "[!] failed to open directory\n");
         return;
     }
-    SOCK_LOG(sock, "[?] dirfd = %d\n", dir_fd);
+    // SOCK_LOG(sock, "[?] dirfd = %d\n", dir_fd);
 
     if (sceKernelGetdents(dir_fd, out, 0x10000) < 0) {
         SOCK_LOG(sock, "[!] failed to get directory entries (%d)\n", errno);
@@ -583,11 +585,15 @@ void dump_dir(int sock, uint64_t authmgr_handle, struct tailored_offsets *offset
     // Make output directory just in case
     _mkdir(out_dir_path);
 
+    SOCK_LOG(sock, "[+] after _mkdir %s\n", out_dir_path);
+
     // Lock the SBL spinlock BKL style
     for (int i = 0; i < 0x100; i++) {
         kernel_copyin(&spinlock_lock, g_kernel_data_base + offsets->offset_sbl_sxlock + 0x18, 0x8);
         sceKernelUsleep(1000);
     }
+
+    SOCK_LOG(sock, "[+] after SBL spinlock\n");
 
     entry = (struct dirent *) dents;
     while (entry->d_fileno) {
@@ -650,13 +656,14 @@ out:
 
 int payload_main(struct payload_args *args)
 {
-	int ret;
-	int sock;
-	struct sockaddr_in addr;
+	// int ret = 0;
+	int sock = 0;
+	// struct sockaddr_in addr;
     uint64_t authmgr_handle;
     struct OrbisKernelSwVersion version;
     struct tailored_offsets offsets;
-
+    NOTIFY("PS5 SELF Decrypter started");
+    /*
 	// Open a debug socket to log to PC
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
@@ -672,6 +679,7 @@ int payload_main(struct payload_args *args)
 	if (ret < 0) {
 		return -1;
 	}
+    */
 
     // Initialize dump hex area
     g_hexbuf = mmap(NULL, 0x10000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -772,6 +780,8 @@ int payload_main(struct payload_args *args)
     authmgr_handle = get_authmgr_sm(sock, &offsets);
     SOCK_LOG(sock, "[+] got auth manager: %p\n", authmgr_handle);
 
+    NOTIFY("PS5 SELF Decrypter: dumping start");
+
     preload_dirents(sock, "/", g_dirent_buf + (0 * 0x10000));
     preload_dirents(sock, "/system/common/lib", g_dirent_buf + (1 * 0x10000));
     preload_dirents(sock, "/system_ex/common_ex/lib", g_dirent_buf + (2 * 0x10000));
@@ -786,7 +796,7 @@ int payload_main(struct payload_args *args)
     dump_dir(sock, authmgr_handle, &offsets, g_dirent_buf + (4 * 0x10000), "/system/sys", "/mnt/usb0/PS5/system/sys");
     dump_dir(sock, authmgr_handle, &offsets, g_dirent_buf + (5 * 0x10000), "/system/vsh", "/mnt/usb0/PS5/system/vsh");
 
-    SOCK_LOG(sock, "[+] done!\n");
+    NOTIFY("PS5 SELF Decrypter: done");
 
 out:
 	_close(sock);

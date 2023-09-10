@@ -7,12 +7,14 @@
 
 #include <sys/types.h>
 
-#define SOCK_LOG(sock, format, ...)                                          \
-{                                                                            \
-    char _macro_printfbuf[512];                                              \
-    int _macro_size = sprintf(_macro_printfbuf, format, ##__VA_ARGS__);      \
-    _write(sock, _macro_printfbuf, _macro_size);                             \
+#define NOTIFY(format, ...)                                          \
+{ \
+    notify_request_t noti_buffer; \
+    (void)memset(&noti_buffer, 0, sizeof(noti_buffer)); \
+    (void)snprintf(noti_buffer.message, sizeof(noti_buffer.message), format, ##__VA_ARGS__); \
+    sceKernelSendNotificationRequest(0, (notify_request_t * ) & noti_buffer, sizeof(noti_buffer), 0); \
 } while(0);
+#define SOCK_LOG(sock, format, ...) { } while(0);
 
 struct sbl_msg_header
 {

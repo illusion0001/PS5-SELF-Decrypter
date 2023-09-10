@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 
 #include <ps5/kernel.h>
+#include <ps5/libkernel.h>
 
 #include "sbl.h"
 #include "self.h"
@@ -118,6 +119,14 @@ int _sceSblAuthMgrSmLoadSelfBlock(
     load.service_id         = service_id;
     load.is_compressed      = SELF_SEGMENT_IS_COMPRESSED(segment);
     load.is_plain_elf       = 0;
-
-    return sceSblServiceRequest(sock, &msg, (char *) &load, (char *) &load);
+    int err = sceSblServiceRequest(sock, &msg, (char *) &load, (char *) &load);
+    if (err != 0)
+    {
+        SOCK_LOG(sock, "sceSblServiceRequest return: %d\n", err);
+    }
+    if (load.res != 0)
+    {
+        SOCK_LOG(sock, "load.res: %d\n", load.res);
+    }
+    return err;
 }

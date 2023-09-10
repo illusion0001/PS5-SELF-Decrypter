@@ -26,7 +26,7 @@ void DumpHex(int sock, const void* data, size_t size) {
 #if DEBUG
     char hexbuf[0x4000];
     (void)memset(hexbuf, 0, sizeof(hexbuf));
-    char *cur = &hexbuf;
+    char *cur = hexbuf;
 
     sprintf(cur, "hex:\n");
     cur += strlen(cur);
